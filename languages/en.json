@@ -1,0 +1,32 @@
+{
+    "SWADEIlluminator": {
+        "Title": "SWADE Illuminator",
+        "AutoIlluminationPenalties": {
+            "Name": "Automatic Illumination Penalties (Beta)",
+            "Hint": "Enables automatic inclusion of suggested Illumination Penalties for Trait rolls based on the current Scene's Global Illumination and Darkness Level settings as well as any Ambient or Token Dim light source in which the Actor's Token is within."
+        },
+        "IlluminationModifierLabels": {
+            "Contexts": {
+                "AroundToken": "(around {name})",
+                "GlobalIllumination": "(Global Illumination)"
+            }
+        },
+        "IlluminationThresholds": {
+            "DimLight": {
+                "Hint": "A darkness threshold between 0.05 and 0.9. When the Scene darkness level exceeds this threshold Global Illumination is considered at least to be Dim Light when determining Illumination penalties.",
+                "Label": "Dim Light Threshold"
+            },
+            "Darkness": {
+                "Hint": "A darkness threshold between 0.1 and 0.95. When the Scene darkness level exceeds this threshold Global Illumination is considered at least to be Darkness when determining Illumination penalties.",
+                "Label": "Dark Threshold"
+            },
+            "PitchDark": {
+                "Hint": "A darkness threshold between 0.15 and 1. When the Scene darkness level exceeds this threshold Global Illumination is disabled and considered to be Pitch Dark when determining Illumination penalties.",
+                "Label": "Pitch Darkness Threshold"
+            }
+        }
+    },
+    "SWADE.Illumination.Dim": "Dim Light",
+    "SWADE.Illumination.Dark": "Dark",
+    "SWADE.Illumination.Pitch": "Pitch Darkness"
+}

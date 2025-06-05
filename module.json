@@ -1,0 +1,58 @@
+{
+    "id": "swade-illuminator",
+    "title": "SWADE Illuminator",
+    "authors": [
+        {
+            "name": "Kristian Serrano",
+            "url": "https://immaterialplane.com",
+            "discord": "kristianserrano"
+        }
+    ],
+    "description": "Sets up Illumination levels in Scene Configs and inserts suggested Illumination penalties to Trait rolls accordingly.",
+    "version": "",
+    "url": "",
+    "manifest": "",
+    "download": "",
+    "changelog": "",
+    "readme": "",
+    "bugs": "",
+    "compatibility": {
+        "minimum": 13,
+        "verified": 13
+    },
+    "relationships": {
+        "systems": [
+            {
+                "id": "swade",
+                "type": "system",
+                "compatibility": {
+                    "minimum": "5"
+                }
+            }
+        ]
+    },
+    "esmodules": [
+        "modules/swade-illuminator.mjs"
+    ],
+    "packs": [],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "languages/en.json"
+        }
+    ],
+    "socket": true,
+    "flags": {
+        "hotReload": {
+            "extensions": [
+                "json",
+                "mjs"
+            ],
+            "paths": [
+                "lang/en.json",
+                "modules/swade-illuminator.mjs"
+            ]
+        }
+    }
+}
