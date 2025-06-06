@@ -2,8 +2,8 @@
     "SWADEIlluminator": {
         "Title": "SWADE Illuminator",
         "AutoIlluminationPenalties": {
-            "Name": "Automatic Illumination Penalties (Beta)",
-            "Hint": "Enables automatic inclusion of suggested Illumination Penalties for Trait rolls based on the current Scene's Global Illumination and Darkness Level settings as well as any Ambient or Token Dim light source in which the Actor's Token is within."
+            "Name": "Suggest Illumination Penalties",
+            "Hint": "Enables automatic inclusion of suggested Illumination Penalties for Trait rolls based on the current Scene's Global Illumination Threshold and Darkness Level settings as well as Dim Light from any nearby Ambient Lights or Tokens within which the Actor's Token is positioned."
         },
         "IlluminationModifierLabels": {
             "Contexts": {
