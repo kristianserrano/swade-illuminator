@@ -10,7 +10,7 @@ Hooks.on('init', () => {
         config: true,
         type: Boolean,
         default: true,
-        requireReload: true,
+        requiresReload: true,
     });
 });
 
