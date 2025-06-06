@@ -34,7 +34,7 @@ Hooks.on('renderSceneConfig', (app, html, context, options) => {
         const pitchDarknessGroup = html.querySelector(`.form-group:has(label[for="${app.id}-environment.globalLight.darkness.max"]`);
         const min = isDim ? 0.05 : 0.1;
         const max = isDim ? 0.9 : 0.95;
-        const rangeElement = foundry.applications.elements.HTMLRangePickerElement.create({
+        const newRangePicker = foundry.applications.elements.HTMLRangePickerElement.create({
             name,
             value: app.document.getFlag(MODULE_ID, threshold.key) ?? min,
             step: 0.05,
@@ -44,16 +44,34 @@ Hooks.on('renderSceneConfig', (app, html, context, options) => {
         });
 
         const group = foundry.applications.fields.createFormGroup({
-            input: rangeElement,
+            input: newRangePicker,
             label: isDim ? game.i18n.localize('SWADEIlluminator.IlluminationThresholds.DimLight.Label') : game.i18n.localize('SWADEIlluminator.IlluminationThresholds.Darkness.Label'),
             localize: true
         });
 
-        group.querySelector('label').setAttribute('for', rangeElement.id);
+        group.querySelector('label').setAttribute('for', newRangePicker.id);
         let p = document.createElement('p');
         p.innerText = isDim ? game.i18n.localize('SWADEIlluminator.IlluminationThresholds.DimLight.Hint') : game.i18n.localize('SWADEIlluminator.IlluminationThresholds.Darkness.Hint');
         p.classList.add('hint');
         group.insertAdjacentElement('beforeend', p);
+
+        function makeChange(rangePicker, changedValue) {
+            for (const rangeInput of rangePicker.querySelectorAll('input')) {
+                rangeInput.value = changedValue;
+            }
+
+            const rangeInput = rangePicker.querySelector('input');
+            const name = rangePicker.name;
+            const value = changedValue;
+            const max = Number(rangeInput.max);
+            const min = Number(rangeInput.min);
+            const step = Number(rangeInput.step);
+            const id = rangePicker.id;
+            rangePicker.replaceWith(foundry.applications.elements.HTMLRangePickerElement.create({ name, value, step, max, min, id }));
+            const replacementRangePicker = html.querySelector(`range-picker[name="${name}"]`);
+            replacementRangePicker.addEventListener('change', (event) => adjustThresholds(event));
+            replacementRangePicker.dispatchEvent(new Event('change', { bubbles: true }));
+        }
 
         function adjustThresholds(event) {
             const step = Number(event.target.getAttribute('step'));
@@ -70,23 +88,6 @@ Hooks.on('renderSceneConfig', (app, html, context, options) => {
             const newHigherValue = Math.round((newValue + step) * 20) / 20;
             const newLowerValue = Math.round((newValue - step) * 20) / 20;
 
-            function makeChange(rangePicker, changedValue) {
-                for (const rangeInput of rangePicker.querySelectorAll('input')) {
-                    rangeInput.value = changedValue;
-                }
-                const rangeInput = rangePicker.querySelector('input');
-                const name = rangePicker.name;
-                const value = changedValue;
-                const max = Number(rangeInput.max);
-                const min = Number(rangeInput.min);
-                const step = Number(rangeInput.step);
-                const id = rangePicker.id;
-                rangePicker.replaceWith(foundry.applications.elements.HTMLRangePickerElement.create({ name, value, step, max, min, id }));
-                const newRangePicker = html.querySelector(`range-picker[name="${name}"]`);
-                newRangePicker.addEventListener('change', (event) => adjustThresholds(event));
-                newRangePicker.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
             if (event.target.name.includes('dim-light-threshold')) {
                 if (darkValue <= newValue) makeChange(darkRangePicker, newHigherValue);
             } else if (event.target.name.includes('dark-threshold')) {
@@ -97,8 +98,8 @@ Hooks.on('renderSceneConfig', (app, html, context, options) => {
             }
         }
 
-        rangeElement.addEventListener('change', (event) => adjustThresholds(event));
-        rangeElement.classList.add('slim');
+        newRangePicker.addEventListener('change', (event) => adjustThresholds(event));
+        newRangePicker.classList.add('slim');
         pitchDarknessGroup.querySelector('range-picker')?.addEventListener('change', (event) => adjustThresholds(event));
 
         for (const pitchDarknessInput of pitchDarknessGroup.querySelectorAll('range-picker input')) {
