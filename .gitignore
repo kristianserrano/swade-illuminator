@@ -2,3 +2,4 @@ node_modules/
 .DS_Store
 tools/fvttLaunch-v12.sh
 tools/fvttLaunch-v13.sh
+*.lock
