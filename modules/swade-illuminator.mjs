@@ -15,7 +15,7 @@ Hooks.on('init', () => {
 });
 
 Hooks.on('renderSceneConfig', (app, html, context, options) => {
-    if (!options.parts?.includes('lighting') || !game.settings.get(MODULE_ID, 'auto-illumination-penalties')) return;
+    if (!options.parts?.includes('lighting')) return;
 
     const illuminationThresholds = [
         {
