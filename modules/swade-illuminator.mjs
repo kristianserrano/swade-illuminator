@@ -124,7 +124,7 @@ for (const hookEvent of ['swadePreRollSkill', 'swadePreRollAttribute']) {
         const targetedTokenIDs = game.user.targets.ids;
         // If there's a token associated with this actor, get its contextual darkness level; this includes scene region contexts. Otherwise, use the scene's current global darkness level.
         const token = game.scenes.current.tokens.find((t) => t.actorId === actor.id);
-        const sceneDarknessLevel = canvas.effects.getDarknessLevel(token?.position);
+        const pointDarknessLevel = canvas.effects.getDarknessLevel(token?.position);
         // Get the scene's thresholds for Dim Light, Darkness, and Pitch Dark (Global Illumination Threshold in FVTT terms).
         const pitchDarknessLevel = game.scenes.current.environment.globalLight.darkness.max;
         const dimLevel = Number(game.scenes.current.getFlag(MODULE_ID, 'dim-light-threshold'));
@@ -138,59 +138,75 @@ for (const hookEvent of ['swadePreRollSkill', 'swadePreRollAttribute']) {
         pitchDarknessIlluminationModifier.threshold = pitchDarknessLevel;
         // Get an illumination modifier based on the scene's current darkness level.
         const sceneIlluminationModifier = illuminationRollModifiers.reduce((maxModifier, currentModifier) => {
-            if (sceneDarknessLevel > currentModifier.threshold) {
+            if (pointDarknessLevel > currentModifier.threshold) {
                 if (!maxModifier || currentModifier.threshold > maxModifier.threshold) {
                     return currentModifier;
                 }
             }
 
-            return sceneDarknessLevel > dimLevel ? maxModifier : null;
+            return pointDarknessLevel > dimLevel ? maxModifier : null;
         });
 
         // If there's a darkness level set, and there's the Actor's token to consider, begin evaluating its own light source as well as nearby light sources.
-        if (sceneDarknessLevel > 0 && sceneIlluminationModifier && (token || targetedTokenIDs.length)) {
+        if (token || targetedTokenIDs.length) {
+            // This function checks the distance between two points and whether the radius of the darkness is greater than or equal to that distance. This is necessary to determine if the Token is actually still within the darkness source's radius as Foundry will simply report that it's not within the darkness' shape at all.
+            function sourceRadiusContains(radius, x1, y1, x2, y2) {
+                let xDiff = x2 - x1;
+                let yDiff = y2 - y1;
+                return radius >= Math.sqrt(Math.pow(xDiff, 2) + Math.pow(yDiff, 2));
+            }
+
             // This function determines what kind of illumination from nearby light sources the token is in.
             function getProximityLight(token) {
-                let c = Object.values(token.object.center);
-                let lights = canvas.effects.lightSources.filter(src => !(src instanceof foundry.canvas.sources.GlobalLightSource) && src.shape.contains(...c));
+                const c = Object.values(token.object.center);
+                const lights = canvas.effects.lightSources.filter((s) => !(s instanceof foundry.canvas.sources.GlobalLightSource) && s.active && !s.isPreview && s.shape.contains(...c));
+                const darkness = canvas.effects.darknessSources.filter((s) => s.active && !s.isPreview && s.shape.contains(...c));
+                const [cx, cy] = c;
 
-                // If there are no light sources, just return false
-                if (!lights.length) return false;
+                // If there are no light or darkness sources, just return false;
+                if (!lights.length && !darkness.length) return false;
 
                 // Determine if the token is in any bright light.
-                let inBright = lights.some(light => {
-                    let { data: { x, y }, ratio } = light;
-                    let bright = foundry.canvas.geometry.ClockwiseSweepPolygon.create({ 'x': x, 'y': y }, {
+                const inBright = lights.some(light => {
+                    const { data: { x, y }, ratio } = light;
+                    const bright = foundry.canvas.geometry.ClockwiseSweepPolygon.create({ x, y }, {
                         type: 'light',
                         boundaryShapes: [new PIXI.Circle(x, y, ratio * light.shape.config.radius)]
                     });
                     return bright.contains(...c);
                 });
+                const inDarkness = !!darkness.length;
 
                 // If it's in bright light, return 'bright'.
-                if (inBright) return 'bright';
-
-                // Otherwise, the assumption at this point is that it's in dim light.
-                return 'dim';
+                if (inBright && !inDarkness) {
+                    // If the token has bright light we need to check if there is any darkness sources (pitch darkness) in range. If so, the overlap of bright light in pitch darkness becomes dim. Also ensure that there's no obstruction (i.e. a wall) for any darkness.
+                    const isInLightDarknessOverlap = canvas.effects.darknessSources.some((s) => s.active && !s.isPreview && sourceRadiusContains(s.radius, cx, cy, s.x, s.y) && !foundry.canvas.geometry.ClockwiseSweepPolygon.testCollision(s.origin, { x: cx, y: cy }, { type: 'light', mode: 'any' }));
+                    return isInLightDarknessOverlap ? 'dim' : 'bright';
+                } else if (inDarkness) {
+                    // If it's within a darkness source
+                    return 'pitch darkness';
+                } else {
+                    // Otherwise, the assumption at this point is that it's in dim light.
+                    return 'dim';
+                }
             }
 
+            // This function checks the Token's lighting conditions by checking the Token's own light as well as calling functions above to determine if the Token is within the radius of a nearby Ambient or Token's light/darkness.
             function checkTokenLighting(token, options = { isTargeted: false }) {
                 // Get the dim and bright light sources the token might have.
                 const hasBrightLight = token.light.bright > 0;
                 const hasDimLight = token.light.dim > 0;
+                // Get any proximity light conditions that the token might be in. This will include token and ambient light sources.
+                let proximityLight = getProximityLight(token);
+                const label = `${proximityLight === 'dim' ? dimIlluminationModifier.label : pitchDarknessIlluminationModifier.label} ${game.i18n.format("SWADEIlluminator.IlluminationModifierLabels.Contexts.AroundToken", { name: token.name })}`;
 
-                // If the token doesn't have any light source, then let's define which Illumination penalty to apply, if any.
+                // If the token does not have bright light, check the type of proximity lighting, and adjust the modifier to be pushed in.
                 if (!hasBrightLight) {
-                    // Get any proximity light conditions that the token might be in. This will include token and ambient light sources.
-                    const proximityLight = getProximityLight(token);
-
                     // If the token is in any light that's in proximity, make the scene darkness penalty optional.
-                    if (proximityLight) sceneIlluminationModifier.ignore = true;
+                    if (proximityLight && sceneIlluminationModifier) sceneIlluminationModifier.ignore = true;
 
-                    // Append the source to the label
-                    const label = `${dimIlluminationModifier.label} ${game.i18n.format("SWADEIlluminator.IlluminationModifierLabels.Contexts.AroundToken", { name: token.name })}`;
-
-                    if ((hasDimLight || proximityLight === 'dim') && !modifiers.some((m) => m.label === label)) {
+                    // If the token doesn't have any light source, then let's define which Illumination penalty to apply, if any.
+                    if (((hasDimLight && proximityLight !== 'pitch darkness') || proximityLight === 'dim') && !modifiers.some((m) => m.label === label)) {
                         // If the token is in Dim lighting, push in that option for a possible modifier.
                         const dimLightModifier = foundry.utils.deepClone(dimIlluminationModifier);
                         // Set the label.
@@ -202,17 +218,41 @@ for (const hookEvent of ['swadePreRollSkill', 'swadePreRollAttribute']) {
                         }
 
                         modifiers.push(dimLightModifier);
+                    } else if (proximityLight === 'pitch darkness' && !modifiers.some((m) => m.label === label)) {
+                        // If the token is in Pitch Darkness, push in that option for a possible modifier.
+                        const pitchDarknessModifier = foundry.utils.deepClone(pitchDarknessIlluminationModifier);
+                        // Set the label.
+                        pitchDarknessModifier.label = label;
 
-                        // Set the scene darkness penalty to optional since this token has light.
-                        sceneIlluminationModifier.ignore = true;
+                        // If the user is targeting a token, it's likely not necessary to apply any Illumination penalties for where the Actor is since its the target's lighting that matters, so set its modifier to be inactive by default. Additionally, if the token is targeted and the user has multiple targets selected, do the same thing.
+                        if ((!options.isTargeted && game.user.targets.size) || (options.isTargeted && game.user.targets.size > 1)) {
+                            pitchDarknessModifier.ignore = true;
+                        }
+
+                        modifiers.push(pitchDarknessModifier);
                     }
+
                 } else {
+                    if (proximityLight === 'dim' && !modifiers.some((m) => m.label === label)) {
+                        // If the token is in Dim Light, push in that option for a possible modifier.
+                        const dimLightModifier = foundry.utils.deepClone(dimIlluminationModifier);
+                        // Set the label.
+                        dimLightModifier.label = label;
+                        modifiers.push(dimLightModifier);
+                    } else if (proximityLight === 'pitch darkness') {
+                        // If the token is in Pitch Darkness, push in that option for a possible modifier.
+                        const pitchDarknessModifier = foundry.utils.deepClone(pitchDarknessIlluminationModifier);
+                        // Set the label.
+                        pitchDarknessModifier.label = label;
+                        modifiers.push(pitchDarknessModifier);
+                    }
+
                     // If it has bright light, set the scene's illumination penalty to be optional.
-                    sceneIlluminationModifier.ignore = true;
+                    if (sceneIlluminationModifier) sceneIlluminationModifier.ignore = true;
                 }
             }
 
-            // First check the Actor's token lighting situation.
+            // First check the Actor's token lighting situation using the functions above.
             checkTokenLighting(token);
 
             // Now check the user's targets lighting situations.
@@ -221,10 +261,12 @@ for (const hookEvent of ['swadePreRollSkill', 'swadePreRollAttribute']) {
                 checkTokenLighting(target, { isTargeted: true });
             }
 
-            // Append the source to the label
-            sceneIlluminationModifier.label = `${sceneIlluminationModifier.label} ${game.i18n.format("SWADEIlluminator.IlluminationModifierLabels.Contexts.GlobalIllumination", { name: token.name })}`;
-            // Finally push in the scene's illumination modifier.
-            modifiers.push(sceneIlluminationModifier);
+            if (sceneIlluminationModifier) {
+                // Append the source to the label
+                sceneIlluminationModifier.label = `${sceneIlluminationModifier.label} ${game.i18n.format("SWADEIlluminator.IlluminationModifierLabels.Contexts.GlobalIllumination", { name: token.name })}`;
+                // Finally push in the scene's illumination modifier.
+                modifiers.push(sceneIlluminationModifier);
+            }
         }
     });
 }
