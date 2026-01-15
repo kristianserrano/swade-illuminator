@@ -118,7 +118,7 @@ for (const hookEvent of ['swadePreRollSkill', 'swadePreRollAttribute']) {
         if (!game.settings.get(MODULE_ID, 'auto-illumination-penalties')) return;
 
         // Get the system's Illumination roll modifiers.
-        const illuminationRollModifiers = foundry.utils.deepClone(CONFIG.SWADE.prototypeRollGroups.find((rollGroup) => rollGroup.name === game.i18n.localize('SWADE.Illumination._name'))?.modifiers);
+        const illuminationRollModifiers = foundry.utils.deepClone(CONFIG.SWADE.rollModifiers.illumination?.modifiers);
         // Get the tokens that the user is targeting.
         // Check each one using the same script for the actor's token but label them as (Target) instead.
         const targetedTokenIDs = game.user.targets.ids;
@@ -130,14 +130,14 @@ for (const hookEvent of ['swadePreRollSkill', 'swadePreRollAttribute']) {
         const dimLevel = Number(game.scenes.current.getFlag(MODULE_ID, 'dim-light-threshold'));
         const darkLevel = Number(game.scenes.current.getFlag(MODULE_ID, 'dark-threshold'));
         // Add darkness level ranges to each Illumination modifiers.
-        const dimIlluminationModifier = illuminationRollModifiers?.find((m) => m.label === game.i18n.localize('SWADE.Illumination.Dim'));
+        const dimIlluminationModifier = illuminationRollModifiers?.dim;
         dimIlluminationModifier.threshold = dimLevel;
-        const darkIlluminationModifier = illuminationRollModifiers?.find((m) => m.label === game.i18n.localize('SWADE.Illumination.Dark'));
+        const darkIlluminationModifier = illuminationRollModifiers?.dark;
         darkIlluminationModifier.threshold = darkLevel;
-        const pitchDarknessIlluminationModifier = illuminationRollModifiers?.find((m) => m.label === game.i18n.localize('SWADE.Illumination.Pitch'));
+        const pitchDarknessIlluminationModifier = illuminationRollModifiers?.pitch;
         pitchDarknessIlluminationModifier.threshold = pitchDarknessLevel;
         // Get an illumination modifier based on the scene's current darkness level.
-        const sceneIlluminationModifier = illuminationRollModifiers.reduce((maxModifier, currentModifier) => {
+        const sceneIlluminationModifier = Object.values(illuminationRollModifiers).reduce((maxModifier, currentModifier) => {
             if (pointDarknessLevel > currentModifier.threshold) {
                 if (!maxModifier || currentModifier.threshold > maxModifier.threshold) {
                     return currentModifier;

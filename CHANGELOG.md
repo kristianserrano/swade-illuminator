@@ -1,5 +1,11 @@
 # SWADE Illuminator
 
+
+
+## Unreleased
+
+- Update illumination penalty calculation to work with SWADE System v5.1.0
+
 ## v1.0.2
 
 - Fixes error when Global Illumination Darkness is set to 0.
