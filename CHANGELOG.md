@@ -1,10 +1,9 @@
 # SWADE Illuminator
 
+## v1.0.3
 
-
-## Unreleased
-
-- Update illumination penalty calculation to work with SWADE System v5.1.0
+- Changes application of roll modifiers from using `CONFIG.SWADE.prototypeRollGroups` to `CONFIG.SWADE.rollModifiers` for SWADE system 5.1.0.
+- Changes minimum SWADE system requirement from 5.0 to 5.1.
 
 ## v1.0.2
 
