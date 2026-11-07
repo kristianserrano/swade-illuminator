@@ -186,26 +186,31 @@ function getSceneIlluminationModifier(illuminationModifiers, darknessLevel, thre
         if (darknessLevel > threshold && (!result || threshold > result.threshold)) {
             result = modifier;
             result.threshold = threshold;
+            result.tier = tier;
         }
     }
     return result;
 }
 
-function onPreRoll(actor, _trait, _roll, modifiers) {
-    // Ignore all of this if the feature is disabled in settings.
-    if (!game.settings.get(MODULE_ID, "auto-illumination-penalties")) return;
+/**
+ * Work out the Illumination penalties that apply to a roll.
+ * @param {object} options
+ * @param {TokenDocument} [options.token]     The rolling actor's token.
+ * @param {TokenDocument[]} [options.targets] Targeted tokens.
+ * @returns {object[]|null} Modifiers ({label, value, ignore?, tier}), or null if unavailable.
+ */
+function getIlluminationModifiers({ token, targets = [] } = {}) {
     const scene = canvas.scene;
-    if (!scene || !canvas.ready || !Array.isArray(modifiers)) return;
+    if (!scene || !canvas.ready) return null;
 
     // Get the system's Illumination roll modifiers.
     const illuminationModifiers = foundry.utils.deepClone(CONFIG.SWADE?.rollModifiers?.illumination?.modifiers ?? {});
     const dimModifier = illuminationModifiers.dim;
     const pitchModifier = illuminationModifiers.pitch;
-    if (!dimModifier || !pitchModifier) return;
+    if (!dimModifier || !pitchModifier) return null;
 
-    const token = getActorToken(actor);
-    const targets = Array.from(game.user.targets ?? []).map((t) => t.document).filter((t) => t?.parent === scene);
     const targetCount = targets.length;
+    const modifiers = [];
 
     // Contextual darkness level at the actor's token (includes Scene Region darkness), else the scene's global level.
     const tokenPoint = getElevatedCenter(token);
@@ -231,9 +236,10 @@ function onPreRoll(actor, _trait, _roll, modifiers) {
         // When targeting, the target's lighting is usually what matters, so suggest the roller's own penalty as inactive.
         const suggestInactive = (!isTargeted && targetCount > 0) || (isTargeted && targetCount > 1);
 
-        const push = (source, ignore) => {
+        const push = (source, tier, ignore) => {
             const modifier = foundry.utils.deepClone(source);
             modifier.label = label;
+            modifier.tier = tier;
             delete modifier.threshold;
             if (ignore) modifier.ignore = true;
             modifiers.push(modifier);
@@ -244,13 +250,13 @@ function onPreRoll(actor, _trait, _roll, modifiers) {
             if (proximityLight && sceneModifier) sceneModifier.ignore = true;
 
             if (((hasDimLight && proximityLight !== "pitch darkness") || proximityLight === "dim") && !hasLabel(label)) {
-                push(dimModifier, suggestInactive);
+                push(dimModifier, "dim", suggestInactive);
             } else if (proximityLight === "pitch darkness" && !hasLabel(label)) {
-                push(pitchModifier, suggestInactive);
+                push(pitchModifier, "pitch", suggestInactive);
             }
         } else {
-            if (proximityLight === "dim" && !hasLabel(label)) push(dimModifier, false);
-            else if (proximityLight === "pitch darkness" && !hasLabel(label)) push(pitchModifier, false);
+            if (proximityLight === "dim" && !hasLabel(label)) push(dimModifier, "dim", false);
+            else if (proximityLight === "pitch darkness" && !hasLabel(label)) push(pitchModifier, "pitch", false);
             // The token's own bright light makes the scene penalty optional.
             if (sceneModifier) sceneModifier.ignore = true;
         }
@@ -264,6 +270,22 @@ function onPreRoll(actor, _trait, _roll, modifiers) {
         delete sceneModifier.threshold;
         modifiers.push(sceneModifier);
     }
+    return modifiers;
+}
+
+/* -------------------------------------------- */
+/*  SWADE Roll Dialog                            */
+/* -------------------------------------------- */
+
+function onPreRoll(actor, _trait, _roll, modifiers) {
+    if (!game.settings.get(MODULE_ID, "auto-illumination-penalties")) return;
+    if (!Array.isArray(modifiers)) return;
+    const scene = canvas.scene;
+    const token = getActorToken(actor);
+    const targets = Array.from(game.user.targets ?? []).map((t) => t.document).filter((t) => t?.parent === scene);
+    const illumination = getIlluminationModifiers({ token, targets });
+    if (!illumination) return;
+    for (const { tier, ...modifier } of illumination) modifiers.push(modifier);
 }
 
 for (const hookEvent of ["swadePreRollSkill", "swadePreRollAttribute"]) {
@@ -275,3 +297,66 @@ for (const hookEvent of ["swadePreRollSkill", "swadePreRollAttribute"]) {
         }
     });
 }
+
+/* -------------------------------------------- */
+/*  Better Rolls for SWADE                       */
+/* -------------------------------------------- */
+
+/**
+ * Better Rolls cards don't fire SWADE's pre-roll hooks; they have their own Illumination actions instead.
+ * Map our tiers onto Better Rolls' action IDs.
+ */
+const BRSW_ILLUMINATION_ACTIONS = { dim: "1LDim", dark: "2LDark", pitch: "3LPitch" };
+const TIER_ORDER = ["dim", "dark", "pitch"];
+
+/**
+ * When Better Rolls finishes populating a new card's actions, pre-select the Illumination action that matches the
+ * lighting. Better Rolls only offers these actions for skills Illumination applies to, and drops Dim/Dark for
+ * Low Light Vision and all of them for Infravision/Darkvision, so those rules are respected automatically.
+ * @param {object} brCard  Better Rolls' BrCommonCard.
+ */
+function onBRSWCardActionsPopulated(brCard) {
+    if (!game.settings.get(MODULE_ID, "auto-illumination-penalties")) return;
+    // Only pre-select on a brand-new card; a reloaded card keeps the choices already made on it.
+    if (brCard.message) return;
+
+    // Collect the card's Illumination actions.
+    const illuminationActions = [];
+    for (const section of Object.values(brCard.actionSections ?? {})) {
+        for (const group of Object.values(section.actionGroups ?? {})) {
+            for (const action of group.actions ?? []) {
+                if (Object.values(BRSW_ILLUMINATION_ACTIONS).includes(action.code?.id)) illuminationActions.push(action);
+            }
+        }
+    }
+    if (!illuminationActions.length) return;
+    // Respect a choice the GM already made with Better Rolls' own GM Illumination toggle.
+    if (illuminationActions.some((a) => a.selected)) return;
+
+    const scene = canvas.scene;
+    const token = brCard.token?.document ?? (brCard.actor ? getActorToken(brCard.actor) : undefined);
+    const targets = (brCard.target_ids ?? [])
+        .map((uuid) => fromUuidSync(uuid))
+        .map((t) => t?.document ?? t)
+        .filter((t) => t?.parent === scene);
+    const illumination = getIlluminationModifiers({ token, targets });
+    if (!illumination) return;
+
+    // Better Rolls takes a single Illumination choice: use the worst penalty that would be on by default.
+    let worst = -1;
+    for (const modifier of illumination) {
+        if (modifier.ignore) continue;
+        worst = Math.max(worst, TIER_ORDER.indexOf(modifier.tier));
+    }
+    if (worst < 0) return;
+    const actionId = BRSW_ILLUMINATION_ACTIONS[TIER_ORDER[worst]];
+    for (const action of illuminationActions) action.selected = action.code.id === actionId;
+}
+
+Hooks.on("BRSWCardActionsPopulated", (brCard) => {
+    try {
+        onBRSWCardActionsPopulated(brCard);
+    } catch (err) {
+        console.error(`${MODULE_ID} | Failed to pre-select Better Rolls Illumination`, err);
+    }
+});

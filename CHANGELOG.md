@@ -1,5 +1,12 @@
 # SWADE Illuminator
 
+## v46.1.0
+
+- Adds Better Rolls for SWADE support. Better Rolls cards don't fire SWADE's pre-roll hooks, so the module now pre-selects the matching Illumination action (Dim −2, Dark −4 or Pitch Darkness −6) when a new Better Rolls card is created.
+  - Uses the same lighting logic as the SWADE roll dialog: scene darkness thresholds, nearby lights and darkness, the token's own light, and the card's targets. Better Rolls takes one Illumination choice, so the worst penalty that would be on by default is selected.
+  - Better Rolls' own rules still apply: it only offers Illumination on the skills it applies to, and it removes the options for Low Light Vision, Infravision and Darkvision.
+  - Leaves the card alone if a GM Illumination toggle in Better Rolls already selected an option, and never changes a card after it's been posted, so you can untick it.
+
 ## v46
 
 - Updates the module for Foundry VTT V14 (tested on 14.369) and SWADE system 6.x (tested on 6.0.4). Drops support for V13 / SWADE 5.x.

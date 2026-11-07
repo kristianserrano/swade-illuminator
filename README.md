@@ -12,9 +12,14 @@ The range of possible values for each Illumination level in the Scene Configurat
 | Dark | 0.1 | 0.95 |
 | Pitch Darkness | 0.15 | 1 |
 
+## Better Rolls for SWADE
+
+When Better Rolls for SWADE is active, new Better Rolls cards open with the matching Illumination option (Dim, Dark or Pitch Darkness) already ticked. Untick it on the card if it doesn't apply.
+
 ## Compatibility
 
 - Foundry VTT V14+ (tested on 14.369)
 - Savage Worlds Adventure Edition system 6.x (tested on 6.0.4)
+- Better Rolls for SWADE 5.29+ (optional, tested on 5.29.2)
 
 For Foundry V13 / SWADE 5.x, use v1.0.3.

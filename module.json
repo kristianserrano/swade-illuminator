@@ -9,7 +9,7 @@
         }
     ],
     "description": "Sets up Illumination levels in Scene Configs and inserts suggested Illumination penalties to Trait rolls accordingly.",
-    "version": "46",
+    "version": "46.1.0",
     "url": "",
     "manifest": "",
     "download": "",
