@@ -9,7 +9,7 @@
         }
     ],
     "description": "Sets up Illumination levels in Scene Configs and inserts suggested Illumination penalties to Trait rolls accordingly.",
-    "version": "",
+    "version": "46",
     "url": "",
     "manifest": "",
     "download": "",
@@ -17,8 +17,8 @@
     "readme": "",
     "bugs": "",
     "compatibility": {
-        "minimum": 13,
-        "verified": 13
+        "minimum": "14",
+        "verified": "14.369"
     },
     "relationships": {
         "systems": [
@@ -26,7 +26,8 @@
                 "id": "swade",
                 "type": "system",
                 "compatibility": {
-                    "minimum": "5.1"
+                    "minimum": "6.0",
+                    "verified": "6.0.4"
                 }
             }
         ]
@@ -50,7 +51,7 @@
                 "mjs"
             ],
             "paths": [
-                "lang/en.json",
+                "languages/en.json",
                 "modules/swade-illuminator.mjs"
             ]
         }
