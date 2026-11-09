@@ -1,6 +1,12 @@
 # SWADE Illuminator
 
-## v46.1.0
+## v46.0.2
+
+- Marks the module as verified for all Foundry VTT V14 builds (e.g. 14.370), so future V14 updates no longer show it as unverified.
+- Adds manifest, download, changelog, readme and bug-report links pointing to the daggerfortysix fork, so Foundry can install and update the module from its GitHub releases.
+- Includes the Better Rolls for SWADE support below (previously labeled v46.1.0, which was never released).
+
+## v46.1.0 (unreleased, shipped in v46.0.2)
 
 - Adds Better Rolls for SWADE support. Better Rolls cards don't fire SWADE's pre-roll hooks, so the module now pre-selects the matching Illumination action (Dim −2, Dark −4 or Pitch Darkness −6) when a new Better Rolls card is created.
   - Uses the same lighting logic as the SWADE roll dialog: scene darkness thresholds, nearby lights and darkness, the token's own light, and the card's targets. Better Rolls takes one Illumination choice, so the worst penalty that would be on by default is selected.

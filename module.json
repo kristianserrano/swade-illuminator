@@ -9,16 +9,16 @@
         }
     ],
     "description": "Sets up Illumination levels in Scene Configs and inserts suggested Illumination penalties to Trait rolls accordingly.",
-    "version": "46.1.0",
-    "url": "",
-    "manifest": "",
-    "download": "",
-    "changelog": "",
-    "readme": "",
-    "bugs": "",
+    "version": "46.0.2",
+    "url": "https://github.com/daggerfortysix/swade-illuminator",
+    "manifest": "https://github.com/daggerfortysix/swade-illuminator/releases/latest/download/module.json",
+    "download": "https://github.com/daggerfortysix/swade-illuminator/releases/download/v46.0.2/module.zip",
+    "changelog": "https://github.com/daggerfortysix/swade-illuminator/blob/main/CHANGELOG.md",
+    "readme": "https://github.com/daggerfortysix/swade-illuminator/blob/main/README.md",
+    "bugs": "https://github.com/daggerfortysix/swade-illuminator/issues",
     "compatibility": {
         "minimum": "14",
-        "verified": "14.369"
+        "verified": "14"
     },
     "relationships": {
         "systems": [
